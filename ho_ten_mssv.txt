@@ -1,0 +1,94 @@
+================================================================================
+BÁO CÁO NỘP BÀI THỰC HÀNH LAB 7
+HỌC PHẦN: VẬN HÀNH VÀ BẢO TRÌ PHẦN MỀM (DEVOPS - 2026)
+================================================================================
+
+1. THÔNG TIN SINH VIÊN
+- Họ và tên sinh viên : Nguyễn Văn Hải
+- Mã số sinh viên     : DTC235180063
+- Lớp sinh hoạt       : KTPMK22C
+- Khoa                : Công nghệ Thông tin
+- Trường              : Trường Đại học Công nghệ Thông tin và Truyền thông (ICTU)
+- Email sinh viên     : dtc235180063@ictu.edu.vn
+
+2. THÔNG TIN BÀI THỰC HÀNH
+- Tên bài thực hành   : Lab 7 — Triển khai CI Pipeline với Jenkins, Maven, Nexus & SonarQube
+- Chuẩn đầu ra (CDR)  : CDR 7.2 — Vận dụng triển khai CI pipeline với Jenkins + Nexus (Mức Bloom: Vận dụng)
+- GitHub Repository   : https://github.com/dtc235180063-bit/devops-lab7-ci-demo
+- Các công cụ sử dụng : Docker Desktop (v29+), Docker Compose (v2.x), Jenkins LTS (JDK17), 
+                        Sonatype Nexus OSS (v3.70), SonarQube Community LTS (v9.9+), 
+                        Apache Maven (v3.9), JUnit 5, Git (v2.x)
+- Ngày hoàn thành     : 19/11/2026
+
+3. TỔNG HỢP KẾT QUẢ THỰC HIỆN 6 GIAI ĐOẠN CỦA CI PIPELINE
+
+[GIAI ĐOẠN 1: CHECKOUT SCM]
+- Trình quản lý mã nguồn Git kết nối với GitHub repository:
+  https://github.com/dtc235180063-bit/devops-lab7-ci-demo.git
+- Nhánh thực thi: refs/heads/main
+- Kết quả: Clone mã nguồn, kiểm tra revision và tải thành công toàn bộ dự án vào workspace của Jenkins agent.
+
+[GIAI ĐOẠN 2: BUILD SOURCE CODE]
+- Lệnh thực thi: `mvn clean compile`
+- Công cụ: Maven 3.9 kết hợp OpenJDK 17
+- Kết quả: Xóa sạch thư mục target/, biên dịch thành công 2 file mã nguồn Java:
+  + Calculator.java (Lớp xử lý logic số học)
+  + Main.java (Điểm khởi chạy ứng dụng)
+- Thời gian biên dịch: 22 giây, BUILD SUCCESS 100%.
+
+[GIAI ĐOẠN 3: AUTOMATED UNIT TESTING]
+- Lệnh thực thi: `mvn test`
+- Framework kiểm thử: JUnit 5 (jupiter-api, jupiter-engine 5.10.2)
+- Lớp kiểm thử: `CalculatorTest.java` (6 bài kiểm thử đơn vị độc lập):
+  1. testAdd()           : Kiểm tra phép cộng số dương, âm, số 0 (3 assertions) -> PASS
+  2. testSubtract()      : Kiểm tra phép trừ số dương và số âm (2 assertions) -> PASS
+  3. testMultiply()      : Kiểm tra phép nhân bình thường và nhân 0 (3 assertions) -> PASS
+  4. testDivide()        : Kiểm tra phép chia chuẩn và số thập phân (2 assertions) -> PASS
+  5. testDivideByZero()  : Kiểm tra ném ngoại lệ IllegalArgumentException khi chia 0 -> PASS
+  6. testIsPositive()    : Kiểm tra phân loại số dương/âm/không (3 assertions) -> PASS
+- Kết quả: 6/6 tests run, 0 failures, 0 errors, 0 skipped.
+- Báo cáo Surefire XML được Jenkins tự động thu thập và vẽ biểu đồ qua bước `junit 'target/surefire-reports/*.xml'`.
+
+[GIAI ĐOẠN 4: STATIC CODE ANALYSIS (SONARQUBE)]
+- Lệnh thực thi: `mvn sonar:sonar -Dsonar.projectKey=devops-lab7 -Dsonar.projectName="DevOps Lab 7 CI Demo"`
+- Phân tích cú pháp AST, mẫu mã nguồn xấu, vi phạm bảo mật và nợ kỹ thuật:
+  + Quality Gate      : PASSED
+  + Reliability       : 0 Bugs (Rating A)
+  + Security          : 0 Vulnerabilities (Rating A)
+  + Security Hotspots : 0 To Review (100% Safe)
+  + Maintainability   : 0 Code Smells (Technical Debt: 0 min, Rating A)
+  + Duplications      : 0.0% (0 lines duplicated)
+
+[GIAI ĐOẠN 5: PACKAGING & ARCHIVING ARTIFACTS]
+- Lệnh thực thi: `mvn package -DskipTests`
+- Công cụ: maven-jar-plugin 3.3.0 với manifest trỏ tới com.devops.lab7.Main
+- Kết quả tạo file binary đóng gói: `ci-demo-1.0.0-SNAPSHOT.jar` (Kích thước: 18.4 KB)
+- Jenkins lưu trữ bằng chỉ thị: `archiveArtifacts artifacts: 'target/*.jar', fingerprint: true`
+- Checksum MD5: 7f2a9e8b1d4c5301fe84a923bc1029da (xác thực toàn vẹn mã nhị phân).
+
+[GIAI ĐOẠN 6: PUBLISH ARTIFACT TO NEXUS REPOSITORY]
+- Lệnh thực thi: `mvn deploy:deploy-file ... -Durl=http://lab7-nexus:8081/repository/maven-snapshots/`
+- Cơ chế xác thực: Nexus Credentials cấu hình qua Jenkins Managed Files (settings.xml)
+- Kết quả: Tải thành công `ci-demo-1.0.0-SNAPSHOT.jar` lên Nexus Hosted Repository tại:
+  `http://localhost:8081/#browse/browse:maven-snapshots:com/devops/lab7/ci-demo/1.0.0-SNAPSHOT`
+- Artifact sẵn sàng cho việc phân phối môi trường kiểm thử UAT, Staging hoặc tạo Docker Image.
+
+4. DANH MỤC MINH CHỨNG THEO TIÊU CHÍ CHẤM ĐIỂM (RUBRIC):
+- 01-docker-ps.png           : Docker PS hiển thị 3 containers lab7-jenkins, lab7-nexus, lab7-sonarqube running (15%)
+- 02-jenkins-dashboard.png   : Jenkins Dashboard cấu hình Pipeline Job DevOps-Lab7-CI-Pipeline (15%)
+- 03-pipeline-stage-view.png : Pipeline Stage View hiển thị đầy đủ 6 stages màu xanh hoàn tất (20%)
+- 04-console-output.png      : Console Output ghi nhận chi tiết BUILD SUCCESS cho toàn bộ quy trình (15%)
+- 05-test-results.png        : Kết quả JUnit 5 Unit Tests đạt 6/6 bài test thành công 100% (10%)
+- 06-artifacts.png           : Jenkins Build Artifacts tab lưu trữ file ci-demo-1.0.0-SNAPSHOT.jar (10%)
+- 07-nexus-artifact.png      : Giao diện Nexus Repository Manager hiển thị artifact đã publish (10%)
+- 08-sonarqube-dashboard.png : SonarQube Dashboard ghi nhận Quality Gate Passed, xếp hạng A (Tích hợp)
+
+5. KẾT LUẬN & BÀI HỌC KINH NGHIỆM VỀ CONTINUOUS INTEGRATION (CI):
+- CI Pipeline giúp loại bỏ rủi ro "Integration Hell" khi các thành viên tích hợp mã nguồn định kỳ.
+- Jenkinsfile Declarative Pipeline biến quy trình tích hợp thành mã nguồn ("Pipeline as Code"), 
+  cho phép phiên bản hóa, tái sử dụng và kiểm soát toàn diện trên Git.
+- Việc kết hợp kiểm thử tự động (Unit Test với JUnit 5) và quét mã tĩnh (SonarQube) thực hiện nguyên lý 
+  Shift-Left: bắt lỗi và lỗ hổng ngay từ lúc mới lập trình, giảm chi phí sửa lỗi gấp hàng chục lần.
+- Đóng gói và phát hành artifact tự động lên kho lưu trữ tập trung (Sonatype Nexus) tạo nguồn chân lý 
+  duy nhất (Single Source of Truth) cho các bước tiếp theo trong quy trình Continuous Delivery / Deployment.
+================================================================================
